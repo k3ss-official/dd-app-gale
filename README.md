@@ -1,4 +1,4 @@
-# did-app-gale
+# dd-app-gale
 
 Mobile-first estimate and pickup-booking prototype for Donkey Dumpster, a junk-removal business serving Columbus, Ohio.
 
