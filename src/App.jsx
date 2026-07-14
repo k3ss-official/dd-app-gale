@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
   Clock3,
   Home,
   MapPin,
@@ -14,6 +15,7 @@ import {
   MessageCircle,
   Phone,
   ShieldCheck,
+  Share2,
   Sparkles,
   Star,
   Trash2,
@@ -266,8 +268,80 @@ function BookingModal({ onClose }) {
   );
 }
 
+function FeedbackDrawer({ onClose }) {
+  const [rating, setRating] = useState(0);
+  const [brand, setBrand] = useState('');
+  const [flow, setFlow] = useState('');
+  const [missing, setMissing] = useState('');
+  const [status, setStatus] = useState('');
+
+  const feedbackText = [
+    'DONKEY DUMPSTER APP FEEDBACK',
+    `Overall: ${rating ? `${rating}/5` : 'Not rated'}`,
+    `Does it feel like Donkey Dumpster? ${brand || 'No answer'}`,
+    `What felt confusing or wrong? ${flow || 'No answer'}`,
+    `What is missing? ${missing || 'No answer'}`,
+    `Prototype: ${window.location.href}`,
+  ].join('\n\n');
+
+  async function sendFeedback() {
+    setStatus('');
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Donkey Dumpster app feedback', text: feedbackText });
+        setStatus('Feedback shared—thank you.');
+      } else {
+        await navigator.clipboard.writeText(feedbackText);
+        setStatus('Copied. Paste it into a text or email.');
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') setStatus('Could not open sharing. Try copying below.');
+    }
+  }
+
+  async function copyFeedback() {
+    await navigator.clipboard.writeText(feedbackText);
+    setStatus('Copied. Paste it into a text or email.');
+  }
+
+  return (
+    <div className="feedback-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="feedback-drawer" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+        <div className="feedback-head">
+          <div><span className="kicker">Prototype review</span><h2 id="feedback-title">Give it to us straight.</h2></div>
+          <button className="icon-button" onClick={onClose} aria-label="Close feedback"><X /></button>
+        </div>
+        <p className="feedback-intro">Your answers open in your phone’s share sheet. Nothing is submitted or stored by this prototype.</p>
+
+        <fieldset className="rating-field">
+          <legend>Overall, how does this direction feel?</legend>
+          <div>{[1, 2, 3, 4, 5].map((value) => <button key={value} className={rating === value ? 'selected' : ''} onClick={() => setRating(value)} aria-label={`${value} out of 5`}>{value}</button>)}</div>
+          <span><small>Way off</small><small>Feels right</small></span>
+        </fieldset>
+
+        <label className="feedback-field">Does this feel like Donkey Dumpster?
+          <textarea value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="What feels right—or not like us?" />
+        </label>
+        <label className="feedback-field">What felt confusing or wrong?
+          <textarea value={flow} onChange={(event) => setFlow(event.target.value)} placeholder="Pricing, wording, booking steps…" />
+        </label>
+        <label className="feedback-field">What are we missing?
+          <textarea value={missing} onChange={(event) => setMissing(event.target.value)} placeholder="Services, questions, photos, features…" />
+        </label>
+
+        <div className="feedback-actions">
+          <button className="btn btn-yellow" onClick={sendFeedback} disabled={!rating && !brand && !flow && !missing}><Share2 /> Send my feedback</button>
+          <button className="copy-button" onClick={copyFeedback}><ClipboardCheck /> Copy instead</button>
+        </div>
+        {status && <p className="feedback-status" role="status">{status}</p>}
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const [booking, setBooking] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   return (
     <div className="app-shell">
       <Header onBook={() => setBooking(true)} />
@@ -276,7 +350,9 @@ function App() {
       <Pricing onBook={() => setBooking(true)} />
       <Reviews />
       <footer><Logo /><p>Columbus junk removal with a little more kick.</p><div><a href="tel:+16144123799"><Phone /> (614) 412-3799</a><button onClick={() => setBooking(true)}><MessageCircle /> Get an estimate</button></div></footer>
+      <button className="feedback-trigger" onClick={() => setFeedback(true)}><MessageCircle /> <span>Give feedback</span><small>Prototype</small></button>
       {booking && <BookingModal onClose={() => setBooking(false)} />}
+      {feedback && <FeedbackDrawer onClose={() => setFeedback(false)} />}
     </div>
   );
 }
