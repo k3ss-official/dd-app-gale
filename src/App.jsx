@@ -1,268 +1,384 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   ArrowRight,
+  Bell,
+  BriefcaseBusiness,
   CalendarDays,
   Camera,
   Check,
   CheckCircle2,
   ChevronRight,
+  CircleDollarSign,
   ClipboardCheck,
   Clock3,
-  Home,
+  ExternalLink,
+  Flag,
+  Gauge,
+  LayoutDashboard,
   MapPin,
   Menu,
   MessageCircle,
+  MoreHorizontal,
+  Navigation,
   Phone,
-  ShieldCheck,
-  Share2,
+  Plus,
+  Route,
+  Search,
+  Send,
+  Settings,
   Sparkles,
-  Star,
   Trash2,
   Truck,
+  Users,
   X,
 } from 'lucide-react';
 
-const LOADS = [
-  { id: 'single', name: 'Single item', note: 'A couch, fridge, or one bulky thing', price: 75, fill: 18 },
-  { id: 'few', name: 'A few things', note: 'About a pickup truck load', price: 149, fill: 38 },
-  { id: 'half', name: 'Half load', note: 'Garage corner or small cleanout', price: 299, fill: 66 },
-  { id: 'full', name: 'Full load', note: 'Big cleanout or project debris', price: 449, fill: 96 },
+const asset = (name) => `${import.meta.env.BASE_URL}brand/${name}`;
+
+const INITIAL_JOBS = [
+  {
+    id: 'DD-2418',
+    time: '8:30',
+    meridiem: 'AM',
+    window: '8:30–10:00 AM',
+    customer: 'Maya Thompson',
+    area: 'Powell',
+    address: 'Demo address · Powell, OH',
+    type: 'Garage cleanout',
+    load: '¾ trailer',
+    price: 460,
+    status: 'Complete',
+    crew: ['RG', 'MT'],
+    truck: 'Truck 02',
+    note: 'Back into the drive. Keep the blue storage tubs.',
+    image: 'job-garage.png',
+    travel: '18 min',
+  },
+  {
+    id: 'DD-2419',
+    time: '10:45',
+    meridiem: 'AM',
+    window: '10:45 AM–12:15 PM',
+    customer: 'Elena Brooks',
+    area: 'Clintonville',
+    address: 'Demo address · Clintonville, OH',
+    type: 'Sofa + mattress',
+    load: '¼ trailer',
+    price: 285,
+    status: 'En route',
+    crew: ['RG', 'MT'],
+    truck: 'Truck 02',
+    note: 'Text on arrival. Sofa is downstairs; narrow side door.',
+    image: 'job-furniture.png',
+    travel: '12 min',
+  },
+  {
+    id: 'DD-2420',
+    time: '1:30',
+    meridiem: 'PM',
+    window: '1:30–2:45 PM',
+    customer: 'Sam Carter',
+    area: 'Bexley',
+    address: 'Demo address · Bexley, OH',
+    type: 'Appliance removal',
+    load: '¼ trailer',
+    price: 340,
+    status: 'Scheduled',
+    crew: ['JP', 'TK'],
+    truck: 'Truck 04',
+    note: 'Fridge is disconnected. Add the garage freezer if space allows.',
+    image: 'job-appliance.png',
+    travel: '21 min',
+  },
+  {
+    id: 'DD-2421',
+    time: '3:45',
+    meridiem: 'PM',
+    window: '3:45–5:45 PM',
+    customer: 'Jordan Lee',
+    area: 'Hilliard',
+    address: 'Demo address · Hilliard, OH',
+    type: 'Renovation debris',
+    load: 'Full trailer',
+    price: 625,
+    status: 'At risk',
+    crew: ['JP', 'TK'],
+    truck: 'Truck 04',
+    note: 'Heavy tile and drywall. Confirm load weight before starting.',
+    image: 'hero-truck.png',
+    travel: '29 min',
+  },
 ];
 
-const ITEMS = [
-  ['Furniture', 'Sofas, tables, mattresses'],
-  ['Appliances', 'Fridges, washers, grills'],
-  ['Cleanout', 'Garage, attic, rental unit'],
-  ['Yard + debris', 'Branches, drywall, project waste'],
+const STATUS_ORDER = ['Scheduled', 'En route', 'On site', 'Loading', 'Complete'];
+const COMPLETION_STEPS = [
+  'Before photos added',
+  'Price approved by customer',
+  'All agreed items loaded',
+  'Area swept and after photos added',
+  'Payment collected',
 ];
 
-const TIMES = ['8–10 AM', '10 AM–12 PM', '12–2 PM', '2–4 PM'];
+const NAV = [
+  ['overview', LayoutDashboard, 'Overview'],
+  ['schedule', CalendarDays, 'Schedule'],
+  ['jobs', BriefcaseBusiness, 'All jobs'],
+  ['crew', Users, 'Crew'],
+];
 
-function Logo({ compact = false }) {
+function Brand({ compact = false }) {
   return (
-    <button className="logo" aria-label="Donkey Dumpster home" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-      <span className="logo-mark" aria-hidden="true">
-        <span className="logo-ear logo-ear-left" />
-        <span className="logo-ear logo-ear-right" />
-        <span className="logo-face">D</span>
-      </span>
-      {!compact && <span className="logo-type"><b>DONKEY</b><small>DUMPSTER</small></span>}
-    </button>
+    <div className={`brand ${compact ? 'brand-compact' : ''}`}>
+      {compact ? (
+        <img src={asset('logo-circle.png')} alt="Donkey Dumpster" />
+      ) : (
+        <img src={asset('donkey-dumpster-logo.avif')} alt="Donkey Dumpster" />
+      )}
+    </div>
   );
 }
 
-function Header({ onBook }) {
-  const [open, setOpen] = useState(false);
+function StatusPill({ status }) {
+  return <span className={`status status-${status.toLowerCase().replaceAll(' ', '-')}`}><i />{status}</span>;
+}
+
+function Sidebar({ view, setView, open, setOpen }) {
   return (
-    <header className="site-header">
-      <Logo />
-      <nav className={open ? 'nav-links open' : 'nav-links'} aria-label="Main navigation">
-        <a href="#how" onClick={() => setOpen(false)}>How it works</a>
-        <a href="#pricing" onClick={() => setOpen(false)}>Pricing</a>
-        <a href="#reviews" onClick={() => setOpen(false)}>Reviews</a>
-      </nav>
-      <div className="header-actions">
-        <a className="phone-link" href="tel:+16144123799"><Phone size={17} /> <span>(614) 412-3799</span></a>
-        <button className="btn btn-dark header-book" onClick={onBook}>Book a pickup <ArrowRight size={17} /></button>
-        <button className="menu-button" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen(!open)}>
-          {open ? <X /> : <Menu />}
-        </button>
+    <>
+      {open && <button className="sidebar-scrim" aria-label="Close navigation" onClick={() => setOpen(false)} />}
+      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
+        <div className="sidebar-brand"><Brand /><button aria-label="Close navigation" onClick={() => setOpen(false)}><X /></button></div>
+        <div className="workspace-label"><span>Field operations</span><strong>Columbus, Ohio</strong></div>
+        <nav aria-label="Operations navigation">
+          {NAV.map(([id, Icon, label]) => (
+            <button key={id} className={view === id ? 'active' : ''} onClick={() => { setView(id); setOpen(false); }}>
+              <Icon /><span>{label}</span>{id === 'schedule' && <b>4</b>}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-rule" />
+        <button className="sidebar-utility"><MessageCircle /><span>Customer requests</span><b>7</b></button>
+        <button className="sidebar-utility"><Settings /><span>Settings</span></button>
+        <div className="sidebar-footer">
+          <div className="avatar avatar-owner">RG</div>
+          <div><strong>Ryan Gale</strong><span>Owner · Dispatch</span></div>
+          <ChevronRight />
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function Topbar({ title, onMenu, onNewJob }) {
+  return (
+    <header className="topbar">
+      <button className="mobile-menu" aria-label="Open navigation" onClick={onMenu}><Menu /></button>
+      <div className="page-title"><span>Tuesday, July 21</span><h1>{title}</h1></div>
+      <div className="topbar-actions">
+        <label className="searchbox"><Search /><input aria-label="Search jobs" placeholder="Search jobs" /></label>
+        <button className="icon-action" aria-label="Notifications"><Bell /><i /></button>
+        <button className="button button-primary" onClick={onNewJob}><Plus />New job</button>
       </div>
     </header>
   );
 }
 
-function TruckMeter({ fill = 65 }) {
+function Metric({ label, value, note, icon: Icon, tone = '' }) {
   return (
-    <div className="truck-meter" aria-label={`Dumpster filled ${fill} percent`}>
-      <div className="truck-cab"><span /><span /></div>
-      <div className="truck-bin"><div style={{ transform: `scaleX(${fill / 100})` }} /></div>
-      <div className="wheel wheel-a" /><div className="wheel wheel-b" />
+    <article className={`metric ${tone}`}>
+      <span className="metric-icon"><Icon /></span>
+      <div><p>{label}</p><strong>{value}</strong><small>{note}</small></div>
+    </article>
+  );
+}
+
+function JobRow({ job, selected, onSelect }) {
+  return (
+    <button className={`job-row ${selected ? 'selected' : ''}`} onClick={() => onSelect(job.id)}>
+      <span className="job-time"><strong>{job.time}</strong><small>{job.meridiem}</small></span>
+      <span className="route-marker" aria-hidden="true"><i /></span>
+      <span className="job-summary"><strong>{job.type}</strong><small><MapPin />{job.area} · {job.customer}</small></span>
+      <span className="job-load"><small>Est. load</small><strong>{job.load}</strong></span>
+      <span className="job-crew">{job.crew.map((person) => <i key={person}>{person}</i>)}</span>
+      <StatusPill status={job.status} />
+      <ChevronRight className="row-chevron" />
+    </button>
+  );
+}
+
+function ScheduleBoard({ jobs, selectedId, onSelect }) {
+  const [day, setDay] = useState('Today');
+  return (
+    <section className="panel schedule-panel">
+      <div className="panel-head">
+        <div><span className="section-kicker">Route board</span><h2>Tuesday’s run</h2></div>
+        <div className="date-switcher" aria-label="Choose schedule day">
+          {['Mon 20', 'Today', 'Wed 22'].map((item) => <button key={item} className={day === item ? 'active' : ''} onClick={() => setDay(item)}>{item}</button>)}
+        </div>
+      </div>
+      {day === 'Today' ? (
+        <div className="job-list">
+          {jobs.map((job) => <JobRow key={job.id} job={job} selected={selectedId === job.id} onSelect={onSelect} />)}
+        </div>
+      ) : (
+        <div className="empty-day"><CalendarDays /><strong>{day} is clear in this demo</strong><span>Use Today to explore the working route.</span></div>
+      )}
+      <footer className="route-summary">
+        <span><Route />2 crews · 4 stops</span>
+        <span><Gauge />73% route capacity</span>
+        <button>Optimize route <ArrowRight /></button>
+      </footer>
+    </section>
+  );
+}
+
+function JobDetail({ job, onAdvance, onComplete }) {
+  if (!job) return null;
+  const statusIndex = STATUS_ORDER.indexOf(job.status);
+  const nextStatus = STATUS_ORDER[Math.min(statusIndex + 1, STATUS_ORDER.length - 1)];
+  const action = job.status === 'Complete' ? 'View job proof' : job.status === 'Loading' ? 'Finish job' : `Mark ${nextStatus.toLowerCase()}`;
+  return (
+    <aside className="panel job-detail" aria-label={`Selected job ${job.id}`}>
+      <div className="job-photo">
+        <img src={asset(job.image)} alt="Donkey Dumpster branded job reference" />
+        <div><span>{job.id}</span><StatusPill status={job.status} /></div>
+      </div>
+      <div className="job-detail-body">
+        <div className="job-title-row"><div><span>{job.window}</span><h2>{job.type}</h2></div><button aria-label="More job actions"><MoreHorizontal /></button></div>
+        <div className="customer-block">
+          <div className="avatar">{job.customer.split(' ').map((part) => part[0]).join('')}</div>
+          <div><strong>{job.customer}</strong><span>{job.address}</span></div>
+          <a href="tel:+16145550100" aria-label={`Call ${job.customer}`}><Phone /></a>
+          <button aria-label={`Message ${job.customer}`}><MessageCircle /></button>
+        </div>
+        <div className="job-note"><Flag /><div><strong>Crew note</strong><p>{job.note}</p></div></div>
+        <dl className="job-facts">
+          <div><dt>Truck</dt><dd><Truck />{job.truck}</dd></div>
+          <div><dt>Estimated</dt><dd><Trash2 />{job.load}</dd></div>
+          <div><dt>Drive</dt><dd><Navigation />{job.travel}</dd></div>
+          <div><dt>Quoted</dt><dd><CircleDollarSign />${job.price}</dd></div>
+        </dl>
+        <div className="progress-label"><span>Job progress</span><strong>{Math.max(statusIndex, 0) + 1} / 5</strong></div>
+        <div className="job-progress" aria-label={`${job.status}, step ${Math.max(statusIndex, 0) + 1} of 5`}>
+          {STATUS_ORDER.map((status, index) => <i key={status} className={index <= statusIndex ? 'done' : ''} />)}
+        </div>
+        <button className="button button-primary button-full" onClick={() => job.status === 'Loading' || job.status === 'Complete' ? onComplete(job) : onAdvance(job.id)}>
+          {job.status === 'Complete' ? <ClipboardCheck /> : <CheckCircle2 />}{action}<ArrowRight />
+        </button>
+        <button className="route-link"><Navigation />Open route to {job.area}<ExternalLink /></button>
+      </div>
+    </aside>
+  );
+}
+
+function Overview({ jobs, selectedId, setSelectedId, onAdvance, onComplete }) {
+  const selected = jobs.find((job) => job.id === selectedId) || jobs[0];
+  return (
+    <>
+      <section className="dispatch-hero">
+        <div className="dispatch-copy"><span><Sparkles />Tuesday dispatch</span><h2>Good morning, Ryan.</h2><p>Two crews are rolling. One late job needs a decision before 2 PM.</p></div>
+        <div className="dispatch-alert"><span>Needs attention</span><strong>Hilliard may overfill Truck 04</strong><button onClick={() => setSelectedId('DD-2421')}>Review job <ArrowRight /></button></div>
+      </section>
+      <section className="metrics-grid" aria-label="Today’s performance">
+        <Metric icon={CalendarDays} label="Jobs today" value="4" note="1 complete · 2 crews" />
+        <Metric icon={CircleDollarSign} label="Booked value" value="$1,710" note="+$385 from Monday" />
+        <Metric icon={Gauge} label="Route capacity" value="73%" note="Room for one small job" />
+        <Metric icon={Clock3} label="At risk" value="1" note="Weight check needed" tone="metric-alert" />
+      </section>
+      <div className="operations-grid">
+        <ScheduleBoard jobs={jobs} selectedId={selectedId} onSelect={setSelectedId} />
+        <JobDetail job={selected} onAdvance={onAdvance} onComplete={onComplete} />
+      </div>
+    </>
+  );
+}
+
+function ScheduleView({ jobs, selectedId, setSelectedId, onAdvance, onComplete }) {
+  return (
+    <div className="operations-grid single-view">
+      <ScheduleBoard jobs={jobs} selectedId={selectedId} onSelect={setSelectedId} />
+      <JobDetail job={jobs.find((job) => job.id === selectedId) || jobs[0]} onAdvance={onAdvance} onComplete={onComplete} />
     </div>
   );
 }
 
-function Hero({ onBook }) {
+function JobsView({ jobs, setSelectedId, setView }) {
+  const [filter, setFilter] = useState('All');
+  const visible = filter === 'All' ? jobs : jobs.filter((job) => job.status === filter);
   return (
-    <main className="hero">
-      <section className="hero-copy">
-        <div className="eyebrow"><MapPin size={15} /> Columbus, Ohio & nearby</div>
-        <h1>Point to it.<br /><span>We hee-haul it.</span></h1>
-        <p className="hero-lede">Junk removal without the runaround. You point, our friendly crew loads, sweeps up, and hauls it away.</p>
-        <div className="hero-actions">
-          <button className="btn btn-yellow btn-large" onClick={onBook}>Get my free estimate <ArrowRight size={19} /></button>
-          <a className="text-link" href="tel:+16144123799"><Phone size={18} /> Call or text us</a>
+    <section className="panel jobs-table-panel">
+      <div className="panel-head jobs-head"><div><span className="section-kicker">Demo pipeline</span><h2>All jobs</h2></div><div className="filter-row">{['All', 'Scheduled', 'En route', 'Complete'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
+      <div className="jobs-table">
+        <div className="jobs-table-header"><span>Job</span><span>Customer</span><span>Area</span><span>Value</span><span>Status</span><span /></div>
+        {visible.map((job) => (
+          <button key={job.id} onClick={() => { setSelectedId(job.id); setView('schedule'); }}>
+            <span><strong>{job.id}</strong><small>{job.type}</small></span><span>{job.customer}</span><span>{job.area}</span><span>${job.price}</span><StatusPill status={job.status} /><ChevronRight />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CrewView() {
+  const crews = [
+    { name: 'Ryan + Marcus', initials: ['RG', 'MT'], truck: 'Truck 02', status: 'Driving to Clintonville', jobs: '1 of 2 complete', load: 38 },
+    { name: 'Jalen + Theo', initials: ['JP', 'TK'], truck: 'Truck 04', status: 'Available until 1:30 PM', jobs: '0 of 2 complete', load: 0 },
+  ];
+  return (
+    <section className="crew-layout">
+      <div className="crew-intro"><span className="section-kicker">Live crew board</span><h2>Know who’s moving—and what they need next.</h2><p>No group-chat archaeology. Each crew sees its next stop, notes, route, and finish checklist in one place.</p></div>
+      <div className="crew-grid">
+        {crews.map((crew, index) => <article className="panel crew-card" key={crew.name}><div className="crew-card-top"><div className="crew-avatars">{crew.initials.map((item) => <i key={item}>{item}</i>)}</div><StatusPill status={index ? 'Scheduled' : 'En route'} /></div><h3>{crew.name}</h3><span><Truck />{crew.truck}</span><span><Navigation />{crew.status}</span><div className="capacity"><div><span>Trailer load</span><strong>{crew.load}%</strong></div><i><b style={{ width: `${crew.load}%` }} /></i></div><footer><span>{crew.jobs}</span><button>Message crew <MessageCircle /></button></footer></article>)}
+      </div>
+    </section>
+  );
+}
+
+function CompletionSheet({ job, onClose, onFinish }) {
+  const [checked, setChecked] = useState(() => job?.status === 'Complete' ? COMPLETION_STEPS : []);
+  if (!job) return null;
+  const complete = checked.length === COMPLETION_STEPS.length;
+  function toggle(item) { setChecked((current) => current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item]); }
+  return (
+    <div className="modal-layer" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}>
+      <section className="completion-sheet" role="dialog" aria-modal="true" aria-labelledby="completion-title">
+        <header><div><span>{job.id} · {job.customer}</span><h2 id="completion-title">Close the loop.</h2><p>Leave dispatch, the customer, and tomorrow-you with clean proof.</p></div><button className="round-button" aria-label="Close completion" onClick={onClose}><X /></button></header>
+        <div className="completion-layout">
+          <div>
+            <span className="section-kicker">Completion checklist</span>
+            <div className="checklist">
+              {COMPLETION_STEPS.map((item, index) => <button key={item} className={checked.includes(item) ? 'checked' : ''} onClick={() => toggle(item)}><i>{checked.includes(item) ? <Check /> : index + 1}</i><span>{item}</span>{(index === 0 || index === 3) && <Camera />}</button>)}
+            </div>
+          </div>
+          <aside className="proof-card">
+            <img src={asset(job.image)} alt="Job reference" />
+            <div><span>Job total</span><strong>${job.price}.00</strong></div>
+            <dl><div><dt>Load</dt><dd>{job.load}</dd></div><div><dt>Crew</dt><dd>{job.crew.join(' + ')}</dd></div><div><dt>Payment</dt><dd>{checked.includes('Payment collected') ? 'Collected' : 'Pending'}</dd></div></dl>
+            <p><CheckCircle2 />A completion text and receipt will be queued for the customer.</p>
+          </aside>
         </div>
-        <div className="trust-row">
-          <span><ShieldCheck size={18} /> $2M insured</span>
-          <span><Clock3 size={18} /> Same-day available</span>
-          <span><Star size={18} fill="currentColor" /> 4.9 from Columbus</span>
-        </div>
+        <footer><span>{checked.length} of {COMPLETION_STEPS.length} checks done</span><button className="button button-primary" disabled={!complete} onClick={() => onFinish(job.id)}><ClipboardCheck />Complete job</button></footer>
       </section>
+    </div>
+  );
+}
 
-      <section className="hero-visual" aria-label="Donkey Dumpster quick quote">
-        <div className="sun-label">THE JUNK STOPS HERE</div>
-        <div className="quote-card">
-          <div className="quote-head">
-            <span>Typical half-load</span>
-            <span className="status-dot">Crew included</span>
-          </div>
-          <TruckMeter fill={68} />
-          <div className="quote-price"><span>from</span><strong>$299</strong></div>
-          <div className="quote-meta">
-            <span><Check size={15} /> Loading labor</span>
-            <span><Check size={15} /> Haul-away</span>
-            <span><Check size={15} /> Sweep-up</span>
-          </div>
-          <button className="btn btn-dark btn-full" onClick={onBook}>See my price <ChevronRight size={18} /></button>
+function NewJobModal({ onClose, onAdd }) {
+  const [form, setForm] = useState({ customer: '', area: '', type: '', time: '' });
+  const valid = Object.values(form).every((value) => value.trim());
+  return (
+    <div className="modal-layer" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}>
+      <section className="new-job-modal" role="dialog" aria-modal="true" aria-labelledby="new-job-title">
+        <header><div><span className="section-kicker">Quick dispatch entry</span><h2 id="new-job-title">Add a job</h2></div><button className="round-button" aria-label="Close new job" onClick={onClose}><X /></button></header>
+        <div className="new-job-fields">
+          <label>Customer name<input autoFocus value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} placeholder="Customer name" /></label>
+          <label>Columbus area<input value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="e.g. Worthington" /></label>
+          <label>Job type<input value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="e.g. Basement cleanout" /></label>
+          <label>Arrival time<input value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} placeholder="e.g. 5:30 PM" /></label>
         </div>
-        <div className="sticker sticker-one">NO SURPRISE<br />FEES</div>
-        <div className="sticker sticker-two"><Sparkles size={18} /> EASY AS<br />HEE-HAW</div>
-      </section>
-    </main>
-  );
-}
-
-function HowItWorks() {
-  return (
-    <section className="section how-section" id="how">
-      <div className="section-heading">
-        <div><span className="kicker">A cleaner space in three steps</span><h2>Heavy lifting? That’s our thing.</h2></div>
-        <p>No vague windows. No mystery add-ons. Tell us what’s going, and we’ll handle the messy part.</p>
-      </div>
-      <div className="steps">
-        <article><span className="step-number">01</span><Camera /><h3>Show us the junk</h3><p>Snap a few photos or describe what you need gone.</p></article>
-        <article><span className="step-number">02</span><CalendarDays /><h3>Pick a good time</h3><p>Choose a two-hour arrival window that works for you.</p></article>
-        <article><span className="step-number">03</span><Truck /><h3>Wave it goodbye</h3><p>We load, sweep up, and responsibly haul it away.</p></article>
-      </div>
-    </section>
-  );
-}
-
-function Pricing({ onBook }) {
-  return (
-    <section className="pricing-section" id="pricing">
-      <div className="pricing-copy">
-        <span className="kicker">Simple volume pricing</span>
-        <h2>Only pay for the space your stuff takes.</h2>
-        <p>Your final price is confirmed before we lift a thing. Labor, haul-away, and disposal are included.</p>
-        <button className="btn btn-yellow" onClick={onBook}>Build my estimate <ArrowRight size={18} /></button>
-      </div>
-      <div className="load-card">
-        <div className="load-card-top"><span>Most popular</span><strong>Half load</strong><small>Garage corner, 2–3 rooms, or project pile</small></div>
-        <TruckMeter fill={66} />
-        <div className="load-card-bottom"><span>Typical starting price</span><strong>$299</strong></div>
-      </div>
-    </section>
-  );
-}
-
-function Reviews() {
-  return (
-    <section className="section review-section" id="reviews">
-      <div className="review-score"><strong>4.9</strong><div><span>★★★★★</span><p>79 Google reviews</p></div></div>
-      <blockquote>“Fast, reliable trash hauling and truly friendly service. Every time we’ve worked with them, they’ve gone above and beyond.”</blockquote>
-      <div className="reviewer"><span>MA</span><div><strong>Michael Anthony</strong><small>Local customer · Google review</small></div></div>
-    </section>
-  );
-}
-
-function BookingModal({ onClose }) {
-  const [step, setStep] = useState(1);
-  const [load, setLoad] = useState('few');
-  const [category, setCategory] = useState('Furniture');
-  const [photos, setPhotos] = useState([]);
-  const [date, setDate] = useState('Tomorrow');
-  const [time, setTime] = useState('10 AM–12 PM');
-  const [address, setAddress] = useState('');
-  const [notes, setNotes] = useState('');
-  const inputRef = useRef();
-  const selectedLoad = useMemo(() => LOADS.find((item) => item.id === load), [load]);
-
-  function addPhotos(event) {
-    const next = [...event.target.files].slice(0, 3 - photos.length).map((file) => ({ file, url: URL.createObjectURL(file) }));
-    setPhotos((current) => [...current, ...next].slice(0, 3));
-  }
-
-  function removePhoto(index) {
-    setPhotos((current) => current.filter((_, i) => i !== index));
-  }
-
-  const canContinue = step !== 3 || address.trim().length > 4;
-
-  return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
-        <div className="booking-topbar">
-          <Logo />
-          <div className="progress-wrap"><span>Step {Math.min(step, 3)} of 3</span><div className="progress"><i style={{ transform: `scaleX(${Math.min(step, 3) / 3})` }} /></div></div>
-          <button className="icon-button" onClick={onClose} aria-label="Close booking"><X /></button>
-        </div>
-
-        {step === 1 && (
-          <div className="booking-layout">
-            <div className="booking-main">
-              <span className="kicker">Let’s size it up</span>
-              <h2 id="booking-title">How much are we hauling?</h2>
-              <p className="booking-intro">A quick guess is perfect. We’ll confirm everything before work begins.</p>
-              <div className="load-options">
-                {LOADS.map((item) => (
-                  <button key={item.id} className={load === item.id ? 'load-option selected' : 'load-option'} onClick={() => setLoad(item.id)}>
-                    <span className="radio">{load === item.id && <i />}</span>
-                    <span className="load-option-copy"><strong>{item.name}</strong><small>{item.note}</small></span>
-                    <span className="load-price">from <b>${item.price}</b></span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <aside className="estimate-panel"><span>Your rough estimate</span><TruckMeter fill={selectedLoad.fill} /><div className="estimate-price"><small>Starting around</small><strong>${selectedLoad.price}</strong></div><p><ShieldCheck size={16} /> Final price confirmed on-site</p></aside>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="booking-main centered-step">
-            <span className="kicker">A little more detail</span>
-            <h2 id="booking-title">What’s getting the boot?</h2>
-            <p className="booking-intro">Choose the closest match, then add photos if you have them.</p>
-            <div className="category-grid">
-              {ITEMS.map(([name, note]) => <button key={name} className={category === name ? 'category selected' : 'category'} onClick={() => setCategory(name)}><span>{name === 'Furniture' ? <Home /> : name === 'Appliances' ? <Sparkles /> : name === 'Cleanout' ? <Trash2 /> : <Truck />}</span><strong>{name}</strong><small>{note}</small><i>{category === name && <Check />}</i></button>)}
-            </div>
-            <div className="photo-row">
-              {photos.map((photo, index) => <div className="photo-preview" key={photo.url}><img src={photo.url} alt={`Uploaded junk ${index + 1}`} /><button onClick={() => removePhoto(index)} aria-label="Remove photo"><X size={14} /></button></div>)}
-              {photos.length < 3 && <button className="photo-button" onClick={() => inputRef.current.click()}><Camera /><span><strong>Add photos</strong><small>Up to 3 · optional</small></span></button>}
-              <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={addPhotos} />
-            </div>
-            <label className="field-label">Anything we should know?<textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Stairs, parking notes, especially heavy items…" /></label>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="booking-layout schedule-layout">
-            <div className="booking-main">
-              <span className="kicker">Nearly there</span>
-              <h2 id="booking-title">When should we swing by?</h2>
-              <p className="booking-intro">Choose a preferred window. We’ll text to confirm availability.</p>
-              <label className="field-label">Service address<div className="input-with-icon"><MapPin /><input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, Columbus, OH" autoFocus /></div></label>
-              <div className="date-options">{['Today', 'Tomorrow', 'Wed, Jul 16'].map((item) => <button key={item} className={date === item ? 'selected' : ''} onClick={() => setDate(item)}><CalendarDays /><span>{item}</span>{item === 'Tomorrow' && <small>Best availability</small>}</button>)}</div>
-              <div className="time-grid">{TIMES.map((item) => <button key={item} className={time === item ? 'selected' : ''} onClick={() => setTime(item)}>{item}{time === item && <CheckCircle2 />}</button>)}</div>
-            </div>
-            <aside className="summary-panel"><span>Pickup summary</span><div><small>Load</small><strong>{selectedLoad.name}</strong></div><div><small>Stuff</small><strong>{category}</strong></div><div><small>When</small><strong>{date}, {time}</strong></div><div className="summary-total"><small>Estimate starts at</small><strong>${selectedLoad.price}</strong></div><p>No charge today. We confirm the final price before loading.</p></aside>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="success-step">
-            <div className="success-mark"><Check /></div>
-            <span className="kicker">Request received</span>
-            <h2 id="booking-title">We’ll be in touch faster than a donkey on dinner duty.</h2>
-            <p>Your pickup request for <strong>{date}, {time}</strong> is ready. This prototype hasn’t sent it anywhere—production will connect this step to SMS and dispatch.</p>
-            <div className="success-details"><span><MapPin />{address}</span><span><Truck />{selectedLoad.name} · from ${selectedLoad.price}</span></div>
-            <button className="btn btn-dark" onClick={onClose}>Back to home</button>
-          </div>
-        )}
-
-        {step < 4 && <div className="booking-footer"><button className="back-button" onClick={() => step === 1 ? onClose() : setStep(step - 1)}><ArrowLeft /> {step === 1 ? 'Cancel' : 'Back'}</button><button className="btn btn-yellow" disabled={!canContinue} onClick={() => setStep(step + 1)}>{step === 3 ? 'Request my pickup' : 'Continue'} <ArrowRight /></button></div>}
+        <div className="new-job-note"><Sparkles /><p><strong>Fast capture first.</strong> Photos, pricing, crew, and disposal notes can be added from the job card.</p></div>
+        <footer><button className="text-button" onClick={onClose}>Cancel</button><button className="button button-primary" disabled={!valid} onClick={() => onAdd(form)}><Plus />Add to today</button></footer>
       </section>
     </div>
   );
@@ -270,91 +386,84 @@ function BookingModal({ onClose }) {
 
 function FeedbackDrawer({ onClose }) {
   const [rating, setRating] = useState(0);
-  const [brand, setBrand] = useState('');
-  const [flow, setFlow] = useState('');
+  const [best, setBest] = useState('');
   const [missing, setMissing] = useState('');
   const [status, setStatus] = useState('');
-
-  const feedbackText = [
-    'DONKEY DUMPSTER APP FEEDBACK',
-    `Overall: ${rating ? `${rating}/5` : 'Not rated'}`,
-    `Does it feel like Donkey Dumpster? ${brand || 'No answer'}`,
-    `What felt confusing or wrong? ${flow || 'No answer'}`,
-    `What is missing? ${missing || 'No answer'}`,
-    `Prototype: ${window.location.href}`,
-  ].join('\n\n');
-
-  async function sendFeedback() {
-    setStatus('');
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'Donkey Dumpster app feedback', text: feedbackText });
-        setStatus('Feedback shared—thank you.');
-      } else {
-        await navigator.clipboard.writeText(feedbackText);
-        setStatus('Copied. Paste it into a text or email.');
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') setStatus('Could not open sharing. Try copying below.');
-    }
+  const message = `Donkey Dumpster V2 feedback\n\nOverall: ${rating || 'Not rated'}/5\nFeels most useful: ${best || '—'}\nStill missing or wrong: ${missing || '—'}`;
+  async function send() {
+    if (navigator.share) { try { await navigator.share({ title: 'Donkey Dumpster V2 feedback', text: message }); setStatus('Thanks — your share sheet is open.'); return; } catch { /* sharing was cancelled */ } }
+    await navigator.clipboard.writeText(message); setStatus('Copied. Paste it into your chat with Tony.');
   }
-
-  async function copyFeedback() {
-    await navigator.clipboard.writeText(feedbackText);
-    setStatus('Copied. Paste it into a text or email.');
-  }
-
   return (
-    <div className="feedback-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="feedback-layer" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="feedback-drawer" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
-        <div className="feedback-head">
-          <div><span className="kicker">Prototype review</span><h2 id="feedback-title">Give it to us straight.</h2></div>
-          <button className="icon-button" onClick={onClose} aria-label="Close feedback"><X /></button>
-        </div>
-        <p className="feedback-intro">Your answers open in your phone’s share sheet. Nothing is submitted or stored by this prototype.</p>
-
-        <fieldset className="rating-field">
-          <legend>Overall, how does this direction feel?</legend>
-          <div>{[1, 2, 3, 4, 5].map((value) => <button key={value} className={rating === value ? 'selected' : ''} onClick={() => setRating(value)} aria-label={`${value} out of 5`}>{value}</button>)}</div>
-          <span><small>Way off</small><small>Feels right</small></span>
-        </fieldset>
-
-        <label className="feedback-field">Does this feel like Donkey Dumpster?
-          <textarea value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="What feels right—or not like us?" />
-        </label>
-        <label className="feedback-field">What felt confusing or wrong?
-          <textarea value={flow} onChange={(event) => setFlow(event.target.value)} placeholder="Pricing, wording, booking steps…" />
-        </label>
-        <label className="feedback-field">What are we missing?
-          <textarea value={missing} onChange={(event) => setMissing(event.target.value)} placeholder="Services, questions, photos, features…" />
-        </label>
-
-        <div className="feedback-actions">
-          <button className="btn btn-yellow" onClick={sendFeedback} disabled={!rating && !brand && !flow && !missing}><Share2 /> Send my feedback</button>
-          <button className="copy-button" onClick={copyFeedback}><ClipboardCheck /> Copy instead</button>
-        </div>
-        {status && <p className="feedback-status" role="status">{status}</p>}
+        <header><div><span className="section-kicker">Ryan, be blunt</span><h2 id="feedback-title">Is this closer?</h2></div><button className="round-button" onClick={onClose} aria-label="Close feedback"><X /></button></header>
+        <p className="feedback-intro">This pass is about scheduling crews and getting every job properly finished. Tap around first, then tell us what does not match a real Donkey Dumpster workday.</p>
+        <fieldset><legend>How close are we now?</legend><div className="rating-row">{[1, 2, 3, 4, 5].map((value) => <button key={value} className={rating === value ? 'active' : ''} onClick={() => setRating(value)}>{value}</button>)}</div><span className="rating-ends"><small>Way off</small><small>That’s it</small></span></fieldset>
+        <label>What would you actually use?<textarea value={best} onChange={(e) => setBest(e.target.value)} placeholder="The schedule, crew view, completion checklist…" /></label>
+        <label>What’s missing or wrong?<textarea value={missing} onChange={(e) => setMissing(e.target.value)} placeholder="Say it exactly how you’d say it on a busy day." /></label>
+        <button className="button button-primary button-full" disabled={!rating} onClick={send}><Send />Send my feedback</button>
+        {status && <p className="feedback-status"><CheckCircle2 />{status}</p>}
       </section>
     </div>
   );
 }
 
-function App() {
-  const [booking, setBooking] = useState(false);
-  const [feedback, setFeedback] = useState(false);
+function MobileNav({ view, setView }) {
+  return <nav className="mobile-nav" aria-label="Mobile operations navigation">{NAV.slice(0, 4).map(([id, Icon, label]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon /><span>{label === 'All jobs' ? 'Jobs' : label}</span></button>)}</nav>;
+}
+
+export default function App() {
+  const [view, setView] = useState('overview');
+  const [jobs, setJobs] = useState(INITIAL_JOBS);
+  const [selectedId, setSelectedId] = useState('DD-2419');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [completionJob, setCompletionJob] = useState(null);
+  const [newJobOpen, setNewJobOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const pageTitle = useMemo(() => NAV.find(([id]) => id === view)?.[2] || 'Overview', [view]);
+
+  function advanceJob(id) {
+    setJobs((current) => current.map((job) => {
+      if (job.id !== id) return job;
+      const index = STATUS_ORDER.indexOf(job.status);
+      return { ...job, status: STATUS_ORDER[Math.min(index + 1, STATUS_ORDER.length - 1)] };
+    }));
+  }
+
+  function finishJob(id) {
+    setJobs((current) => current.map((job) => job.id === id ? { ...job, status: 'Complete' } : job));
+    setCompletionJob(null);
+  }
+
+  function addJob(form) {
+    const next = {
+      id: `DD-${2422 + jobs.length - INITIAL_JOBS.length}`,
+      time: form.time.replace(/\s?(AM|PM)$/i, ''), meridiem: form.time.match(/(AM|PM)$/i)?.[1]?.toUpperCase() || '', window: form.time,
+      customer: form.customer, area: form.area, address: `Demo address · ${form.area}, OH`, type: form.type,
+      load: 'To confirm', price: 0, status: 'Scheduled', crew: ['—'], truck: 'Unassigned', note: 'New job — add access notes before dispatch.', image: 'hero-truck.png', travel: '—',
+    };
+    setJobs((current) => [...current, next]); setSelectedId(next.id); setNewJobOpen(false); setView('schedule');
+  }
+
   return (
-    <div className="app-shell">
-      <Header onBook={() => setBooking(true)} />
-      <Hero onBook={() => setBooking(true)} />
-      <HowItWorks />
-      <Pricing onBook={() => setBooking(true)} />
-      <Reviews />
-      <footer><Logo /><p>Columbus junk removal with a little more kick.</p><div><a href="tel:+16144123799"><Phone /> (614) 412-3799</a><button onClick={() => setBooking(true)}><MessageCircle /> Get an estimate</button></div></footer>
-      <button className="feedback-trigger" onClick={() => setFeedback(true)}><MessageCircle /> <span>Give feedback</span><small>Prototype</small></button>
-      {booking && <BookingModal onClose={() => setBooking(false)} />}
-      {feedback && <FeedbackDrawer onClose={() => setFeedback(false)} />}
+    <div className="operations-app">
+      <Sidebar view={view} setView={setView} open={sidebarOpen} setOpen={setSidebarOpen} />
+      <main className="workspace">
+        <Topbar title={pageTitle} onMenu={() => setSidebarOpen(true)} onNewJob={() => setNewJobOpen(true)} />
+        <div className="demo-notice"><span>Interactive V2 prototype</span><p>Sample jobs and customers · no live data is being sent</p></div>
+        <div className="workspace-content">
+          {view === 'overview' && <Overview jobs={jobs} selectedId={selectedId} setSelectedId={setSelectedId} onAdvance={advanceJob} onComplete={setCompletionJob} />}
+          {view === 'schedule' && <ScheduleView jobs={jobs} selectedId={selectedId} setSelectedId={setSelectedId} onAdvance={advanceJob} onComplete={setCompletionJob} />}
+          {view === 'jobs' && <JobsView jobs={jobs} setSelectedId={setSelectedId} setView={setView} />}
+          {view === 'crew' && <CrewView />}
+        </div>
+      </main>
+      <button className="feedback-trigger" onClick={() => setFeedbackOpen(true)}><MessageCircle /><span>Give feedback</span><small>Ryan, tap here</small></button>
+      <MobileNav view={view} setView={setView} />
+      {completionJob && <CompletionSheet job={completionJob} onClose={() => setCompletionJob(null)} onFinish={finishJob} />}
+      {newJobOpen && <NewJobModal onClose={() => setNewJobOpen(false)} onAdd={addJob} />}
+      {feedbackOpen && <FeedbackDrawer onClose={() => setFeedbackOpen(false)} />}
     </div>
   );
 }
-
-export default App;
